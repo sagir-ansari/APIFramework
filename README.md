@@ -1,6 +1,6 @@
 # jmeter-ant
 
-A Simple Ant project for JMeter Performance Test
+A Simple Ant project for JMeter API Test
 
 # Pre-Requisite
 * Java 1.7 or above
