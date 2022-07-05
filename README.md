@@ -22,7 +22,7 @@ ant clean
 ant show-test-properties
 ```
 
-* To run the JMeter Performance Test
+* To run the JMeter API Test
 
 ```
 ant run
@@ -31,23 +31,8 @@ ant run
 * To generate HTML report
 
 ```
-ant generate-report
+ant report
 ```
-
-* To generate charts
-
-```
-ant generate-chart
-```
-
-To generate we need to have required plugins. If they are not present,
-
-```
-ant install-plugins
-```
-
-will take care of installing necessary plugins
-
 
 ======================
 
