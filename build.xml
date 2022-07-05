@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+<project name="CPT" basedir="." xmlns:ac="antlib:net.sf.antcontrib">
+
+	<description>Continuous API and Performance Testing Process</description>
+
+	<!-- Read the test properties from build.propertis -->
+	<property file="build.properties" />
+	
+	<!-- System & other ant properties -->
+	<property environment="env" />
+	<property name="jmeter.home" value="${env.JMETER_HOME}"/>
+	<property name="test.plan.path" value="${basedir}/${testplan.path}"/>
+	<property name="test.result.path" value="${basedir}/result"/>
+	<property name="test.log.path" value="${basedir}/log"/>
+	<property name="test.report.path" value="${basedir}/output"/>
+	<property name="test.functionalReport.path" value="${basedir}/report"/>
+	<property name="lib.dir" value="${basedir}/lib"/>
+	<property name="show-data" value="y"/>
+	<property name="report.title" value="API Test Results"/>
+
+	<property name="format" value="2.1"/>
+
+    <condition property="style_version" value="_21">
+        <equals arg1="${format}" arg2="2.1"/>
+    </condition>
+
+	<!-- set classpath with the path containing jars -->
+    <path id="jmeter.classpath">
+		<fileset dir="${lib.dir}">
+				<include name="*.jar"/>
+		</fileset>
+    </path>
+	<pathconvert pathsep=":"  property="jmeter.classpath" refid="jmeter.classpath"></pathconvert>
+
+	<!-- call all tasks in this sequence -->
+	<target name="all"
+			depends="clean,show-test-properties,run,report"/>
+	
+	<!-- clean project by removing all the temp files -->
+	<target name="clean">
+	     <delete dir="${test.result.path}"/>
+		 <delete dir="${test.log.path}"/>
+		 <delete dir="${test.report.path}"/>
+		 <delete dir="${test.functionalReport.path}"/>
+	</target>
+	
+	<!-- show test properties -->
+	<target name="show-test-properties">
+		<echo>JMETER_HOME : ${jmeter.home}</echo>
+		<echo>TEST_PATH   : ${test.plan.path}</echo>
+		<echo>Environment : ${Environment}</echo>
+	</target>	
+
+	<!-- jmeter ant task -->
+	<taskdef
+	    name="jmeter"
+	    classpathref="jmeter.classpath"
+	    classname="org.programmerplanet.ant.taskdefs.jmeter.JMeterTask"/>
+
+	<!-- To run jmeter test -->
+	<target name="run" depends="clean, show-test-properties">
+		
+		<!-- create dir -->
+		<mkdir  dir="${test.result.path}"/>
+		<mkdir  dir="${test.log.path}"/>
+		
+		<jmeter
+			jmeterhome="${jmeter.home}"
+		    testplan ="${test.plan.path}"
+		    resultlog="${test.result.path}/result.jtl"
+			jmeterlogfile="${test.log.path}/jmeter.log"
+			>
+			<jvmarg value="${jvm.arg}"/> <!-- modify as you wish -->
+			
+			<!-- Force suitable defaults -->
+			<property name="jmeter.save.saveservice.output_format" value="xml"/>
+			<property name="jmeter.save.saveservice.assertion_results" value="all"/>
+			<property name="jmeter.save.saveservice.thread_counts" value="true"/>
+			<property name="jmeter.save.saveservice.bytes" value="true"/>
+			<property name="jmeter.save.saveservice.response_data.on_error" value="true"/>
+			<property name="jmeter.save.saveservice.response_data" value="true"/>
+			<property name="jmeter.save.saveservice.response_message" value="true"/>
+			<property name="jmeter.save.saveservice.samplerData" value="true"/>
+			<property name="jmeter.save.saveservice.responseHeaders" value="true"/>
+			<property name="jmeter.save.saveservice.requestHeaders" value="true"/>
+			<!-- values for UDV -->
+			<property name="Environment" value="${Environment}"/>
+		</jmeter>
+	</target>
+
+	<property name="lib.dir" value="${jmeter.home}/lib"/>
+
+	<!-- Use xalan copy from JMeter lib directory to ensure consistent processing with Java 1.4+ -->
+    <path id="xslt.classpath">
+        <fileset dir="${lib.dir}" includes="xalan*.jar"/>
+        <fileset dir="${lib.dir}" includes="serializer*.jar"/>
+    </path>
+
+	<target name="report" depends="xslt-report,copy-images">
+		<mkdir  dir="${basedir}/report"/>
+        <echo>Report generated at ${report.datestamp}</echo>
+    </target>
+
+    <target name="xslt-report" depends="_message_xalan">
+        <tstamp><format property="report.datestamp" pattern="yyyy/MM/dd HH:mm"/></tstamp>
+        <xslt
+            classpathref="xslt.classpath"
+            force="true"
+            in="${test.result.path}/result.jtl"
+            out="${basedir}/report/result.html"
+            style="${basedir}/lib/jmeter-results-detail-report${style_version}.xsl">
+            <param name="showData" expression="${show-data}"/>
+            <param name="titleReport" expression="${report.title}"/>
+            <param name="dateReport" expression="${report.datestamp}"/>
+        </xslt>
+    </target>
+
+    <!-- Copy report images if needed -->
+    <target name="copy-images" depends="verify-images" unless="samepath">
+        <copy file="${basedir}/lib/expand.png" tofile="${basedir}/report/expand.png"/>
+        <copy file="${basedir}/lib/collapse.png" tofile="${basedir}/report/collapse.png"/>
+    </target>
+
+    <target name="verify-images">
+        <condition property="samepath">
+                <equals arg1="${basedir}/lib" arg2="${basedir}/report" />
+        </condition>
+    </target>
+
+	
+	 <!-- Check that the xalan libraries are present -->
+    <condition property="xalan.present">
+          <and>
+              <!-- No need to check all jars; just check a few -->
+            <available classpathref="xslt.classpath" classname="org.apache.xalan.processor.TransformerFactoryImpl"/>
+            <available classpathref="xslt.classpath" classname="org.apache.xml.serializer.ExtendedContentHandler"/>
+          </and>
+    </condition>
+
+    <target name="_message_xalan" unless="xalan.present">
+          <echo>Cannot find all xalan and/or serialiser jars</echo>
+        <echo>The XSLT formatting may not work correctly.</echo>
+        <echo>Check you have xalan and serializer jars in ${lib.dir}</echo>
+    </target>	
+	
+</project>
